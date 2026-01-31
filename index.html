@@ -1,14 +1,11 @@
-
 <!DOCTYPE html>
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<title>Neon Sudoku</title>
+<title>Random Neon Sudoku</title>
 
 <style>
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -22,18 +19,15 @@ body {
 }
 
 .container {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255,255,255,0.06);
   padding: 30px;
   border-radius: 20px;
-  box-shadow:
-    0 0 40px rgba(0,255,255,0.25),
-    inset 0 0 20px rgba(255,255,255,0.05);
+  box-shadow: 0 0 40px rgba(0,255,255,0.25);
   backdrop-filter: blur(12px);
   text-align: center;
 }
 
 h2 {
-  margin: 0 0 15px;
   letter-spacing: 3px;
   text-shadow: 0 0 12px cyan;
 }
@@ -56,35 +50,20 @@ input {
   color: cyan;
   border: none;
   outline: none;
-  transition: 0.2s;
-}
-
-input:hover {
-  background: rgba(0,255,255,0.12);
 }
 
 input:focus {
   box-shadow: inset 0 0 12px cyan;
 }
 
-/* 3x3 neon çizgiler */
-tr:nth-child(3n) td {
-  border-bottom: 2px solid cyan;
-}
-td:nth-child(3n) {
-  border-right: 2px solid cyan;
-}
-tr:first-child td {
-  border-top: 2px solid cyan;
-}
-td:first-child {
-  border-left: 2px solid cyan;
-}
+tr:nth-child(3n) td { border-bottom: 2px solid cyan; }
+td:nth-child(3n) { border-right: 2px solid cyan; }
+tr:first-child td { border-top: 2px solid cyan; }
+td:first-child { border-left: 2px solid cyan; }
 
 .fixed {
   color: #fff;
   background: rgba(255,255,255,0.15);
-  text-shadow: 0 0 6px #fff;
 }
 
 .error {
@@ -97,46 +76,86 @@ button {
   border: none;
   color: #fff;
   padding: 10px 20px;
-  margin-top: 10px;
+  margin: 5px;
   border-radius: 25px;
   cursor: pointer;
-  font-size: 14px;
   box-shadow: 0 0 20px rgba(0,245,255,0.7);
-  transition: 0.3s;
-}
-
-button:hover {
-  transform: scale(1.1);
-  box-shadow: 0 0 30px rgba(0,245,255,1);
 }
 </style>
 </head>
 
 <body>
 <div class="container">
-  <h2>SUDOKU</h2>
+  <h2>RANDOM SUDOKU</h2>
   <table id="sudoku"></table>
-  <button onclick="resetSudoku()">Sıfırla</button>
+  <button onclick="newGame()">Yeni Oyun</button>
 </div>
 
 <script>
-const puzzle = [
-  [5,3,0,0,7,0,0,0,0],
-  [6,0,0,1,9,5,0,0,0],
-  [0,9,8,0,0,0,0,6,0],
-
-  [8,0,0,0,6,0,0,0,3],
-  [4,0,0,8,0,3,0,0,1],
-  [7,0,0,0,2,0,0,0,6],
-
-  [0,6,0,0,0,0,2,8,0],
-  [0,0,0,4,1,9,0,0,5],
-  [0,0,0,0,8,0,0,7,9]
-];
-
 const table = document.getElementById("sudoku");
 
-function createBoard() {
+// ---------------- SUDOKU ÜRETİCİ ----------------
+
+function generateSolvedBoard() {
+  const board = Array.from({ length: 9 }, () => Array(9).fill(0));
+  solve(board);
+  return board;
+}
+
+function solve(board) {
+  for (let row = 0; row < 9; row++) {
+    for (let col = 0; col < 9; col++) {
+      if (board[row][col] === 0) {
+        const nums = shuffle([1,2,3,4,5,6,7,8,9]);
+        for (let num of nums) {
+          if (isValid(board, row, col, num)) {
+            board[row][col] = num;
+            if (solve(board)) return true;
+            board[row][col] = 0;
+          }
+        }
+        return false;
+      }
+    }
+  }
+  return true;
+}
+
+function isValid(board, r, c, n) {
+  for (let i = 0; i < 9; i++) {
+    if (board[r][i] === n || board[i][c] === n) return false;
+  }
+  const sr = Math.floor(r / 3) * 3;
+  const sc = Math.floor(c / 3) * 3;
+  for (let i = sr; i < sr + 3; i++) {
+    for (let j = sc; j < sc + 3; j++) {
+      if (board[i][j] === n) return false;
+    }
+  }
+  return true;
+}
+
+function shuffle(arr) {
+  return arr.sort(() => Math.random() - 0.5);
+}
+
+function removeNumbers(board, difficulty = 45) {
+  const puzzle = board.map(r => r.slice());
+  let removed = 0;
+  while (removed < difficulty) {
+    const r = Math.floor(Math.random() * 9);
+    const c = Math.floor(Math.random() * 9);
+    if (puzzle[r][c] !== 0) {
+      puzzle[r][c] = 0;
+      removed++;
+    }
+  }
+  return puzzle;
+}
+
+// ---------------- BOARD ÇİZİM ----------------
+
+function createBoard(puzzle) {
   table.innerHTML = "";
   for (let i = 0; i < 9; i++) {
     const tr = document.createElement("tr");
@@ -152,9 +171,10 @@ function createBoard() {
       }
 
       input.oninput = () => {
-        input.value = input.value.replace(/[^1-9]/g, "");
-        checkCell(i, j, input);
-      };
+  input.value = input.value.replace(/[^1-9]/g, "");
+  checkCell(i, j, input);
+  checkGameStatus(); // 👈 BU SATIR
+};
 
       td.appendChild(input);
       tr.appendChild(td);
@@ -170,36 +190,56 @@ function checkCell(row, col, input) {
 
   const rows = document.querySelectorAll("tr");
 
-  for (let j = 0; j < 9; j++) {
-    if (j !== col && rows[row].children[j].firstChild.value === val) {
-      input.classList.add("error"); return;
-    }
-  }
+  for (let j = 0; j < 9; j++)
+    if (j !== col && rows[row].children[j].firstChild.value === val)
+      return input.classList.add("error");
 
-  for (let i = 0; i < 9; i++) {
-    if (i !== row && rows[i].children[col].firstChild.value === val) {
-      input.classList.add("error"); return;
-    }
-  }
+  for (let i = 0; i < 9; i++)
+    if (i !== row && rows[i].children[col].firstChild.value === val)
+      return input.classList.add("error");
 
   const sr = Math.floor(row / 3) * 3;
   const sc = Math.floor(col / 3) * 3;
 
-  for (let i = sr; i < sr + 3; i++) {
-    for (let j = sc; j < sc + 3; j++) {
+  for (let i = sr; i < sr + 3; i++)
+    for (let j = sc; j < sc + 3; j++)
       if ((i !== row || j !== col) &&
-          rows[i].children[j].firstChild.value === val) {
-        input.classList.add("error"); return;
-      }
+          rows[i].children[j].firstChild.value === val)
+        return input.classList.add("error");
+}
+
+// ---------------- YENİ OYUN ----------------
+
+function newGame() {
+  const solved = generateSolvedBoard();
+  const puzzle = removeNumbers(solved, 45); // sayı ↑ zorlaşır
+  createBoard(puzzle);
+}
+
+function checkGameStatus() {
+  const inputs = document.querySelectorAll("input");
+
+  for (let input of inputs) {
+    if (input.value === "") return;
+  }
+
+  for (let input of inputs) {
+    if (input.classList.contains("error")) {
+      setTimeout(() => {
+        alert("❌ Bazı yerler yanlış knk");
+      }, 100);
+      return;
     }
   }
+
+  setTimeout(() => {
+    alert("🎉 HELAL! Sudoku bitti");
+  }, 100);
 }
 
-function resetSudoku() {
-  createBoard();
-}
-
-createBoard();
+newGame();
 </script>
 </body>
 </html>
+
+
